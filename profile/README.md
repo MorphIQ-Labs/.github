@@ -1,4 +1,4 @@
-# MorphIQ Labs 🌊
+# MorphIQ Labs
 
 ## Democratizing Complex Analytics Through Modern Technology
 
