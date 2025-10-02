@@ -1,8 +1,8 @@
 # MorphIQ Labs
 
-![image](favicon.png) 
-
 ## Decisions that see through the noise.
+
+![image](favicon.png)
 
 We're building the next generation of financial analysis tools, starting with **VectorWave** - a high-performance Java library for adaptive wavelet analysis.
 
