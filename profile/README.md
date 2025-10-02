@@ -4,7 +4,7 @@
 
 ## Decisions that see through the noise.
 
-We're building the next generation of high performance, low level signal analysis tools because when you can detect the shift, you can decide sooner.
+We're building the next generation of high performance, low level signal analysis and denoising tools because when you can detect the shift, you can decide sooner.
 
 ### 🔗 Connect
 - Website: [morphiqlabs.com](https://morphiqlabs.com)
