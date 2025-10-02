@@ -1,5 +1,3 @@
-![image](favicon.png)
-
 # MorphIQ Labs
 
 ## Decisions that see through the noise.
