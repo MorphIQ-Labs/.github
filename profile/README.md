@@ -1,6 +1,6 @@
 # MorphIQ Labs
 
-## Democratizing Complex Analytics Through Modern Technology
+## Decisions that see through the noise.
 
 We're building the next generation of financial analysis tools, starting with **VectorWave** - a high-performance Java library for adaptive wavelet analysis.
 
