@@ -4,7 +4,7 @@
 
 ![image](favicon.png)
 
-We're building the next generation of financial analysis tools, starting with **VectorWave** - a high-performance Java library for adaptive wavelet analysis.
+We're building the next generation of high performance, low level signal analysis tools because when you can detect the shift, you can decide sooner.
 
 ### 🔗 Connect
 - Website: [morphiqlabs.com](https://morphiqlabs.com)
