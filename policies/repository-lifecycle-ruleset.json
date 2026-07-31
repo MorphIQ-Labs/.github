@@ -1,0 +1,27 @@
+{
+  "name": "Repository lifecycle",
+  "target": "repository",
+  "enforcement": "active",
+  "bypass_actors": [
+    {
+      "actor_id": null,
+      "actor_type": "OrganizationAdmin",
+      "bypass_mode": "always"
+    }
+  ],
+  "conditions": {
+    "repository_name": {
+      "include": ["~ALL"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "repository_transfer"
+    },
+    {
+      "type": "repository_delete"
+    }
+  ]
+}
+
