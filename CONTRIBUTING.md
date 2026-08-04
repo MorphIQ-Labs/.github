@@ -55,14 +55,23 @@ Nothing is published to a package registry. GitHub Packages has no Cargo format
 and neither does Google Artifact Registry, so Rust crates are distributed as
 git tags, which is what consuming repositories already pin.
 
-**The guard against a stray `cargo publish` belongs in `release-plz.toml`, not
-in the manifests.** release-plz filters manifest-unpublishable packages through
-`publishable_packages()` before it reaches its tagging step, so a
-`publish = false` in a `Cargo.toml` does not merely refuse publication — it
-drops the package before there is anything to tag, turning every release into a
-silent "nothing to release". No error, no warning. ferro-risk hit this in #228
-and had to lift the setting; crates that exist only to be fuzzed or benchmarked
-may keep it, because they are not in the release group.
+**The crate that owns the tag must stay publishable.** release-plz filters
+manifest-unpublishable packages through `publishable_packages()` before it
+reaches its tagging step, so a `publish = false` in that crate's `Cargo.toml`
+does not merely refuse publication — it drops the package before there is
+anything to tag, turning every release into a silent "nothing to release". No
+error, no warning. ferro-risk hit this in #228 and had to lift the setting.
+
+Every other crate may keep `publish = false`, including crates inside the
+release group: ferro-risk's `streaming-bench` keeps it and is still versioned
+and changelogged alongside the tag owner. The workspace-wide guard lives in
+`release-plz.toml`, so nothing reaches a registry either way.
+
+Prefer a tag owner with no path dependencies. cargo-deny's
+`allow-wildcard-paths` exempts *private* crates only, so making a crate with
+wildcard path dependencies publishable trips the `bans` gate — which is why
+anvil's tag is owned by `platform-core` rather than by the `anvil-runner`
+binary.
 
 ### Setting up a Rust repository
 
