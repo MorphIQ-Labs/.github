@@ -38,12 +38,38 @@ configuration out of commits.
 
 ## Releases
 
-Releases are automated by release-plz and are not cut by hand.
+Releases are automated and are not cut by hand. There are two tracks, and which
+one a repository is on is not a preference — it follows from whether it has
+private git dependencies.
+
+**Producers** — repositories with no `git = "…MorphIQ-Labs/…"` dependencies.
+These are the crates other repositories consume: ferro-risk, ferro-wave,
+ferro-feed, ferro-match, ferro-replay, anvil, morphiq-platform. They use
+**release-plz**:
 
 1. A `chore: release` pull request stays open, holding the version bump and the
    changelog entries derived from the commits since the last tag.
 2. Reviewing and merging that pull request **is** the release.
 3. The tag follows automatically.
+
+**Consumers** — repositories that pin a `ferro-*` crate by git tag, currently
+gamma-foundry and spread-foundry. They use **`rust-tag-release.yml`**:
+
+1. Bump the version in `Cargo.toml` in an ordinary pull request.
+2. Merging it to the default branch cuts the tag and the GitHub release, with a
+   changelog grouped from conventional commit subjects.
+3. Repositories that build images pick the tag up through their own
+   `on: push: tags: ['v*']` trigger and stamp it onto every image.
+
+**Why the split is forced.** release-plz's `git_only` mode reads the previous
+release by running `cargo package` over the workspace, and cargo rewrites a
+packaged manifest for a registry consumer: it *strips* the `git` spec and
+replaces it with a crates.io lookup. The `ferro-*` crates are not published
+there and will not be — distribution is git tags — so packaging fails with
+`no matching package named ferro-risk found`. There is no way around it:
+`--no-verify` skips the build but not the manifest rewrite, and
+`publish = false` does not exclude a crate from `cargo package --workspace`.
+Any new repository that pins a `ferro-*` crate belongs on the consumer track.
 
 The version comes from the commit subjects, which is the other reason the
 convention is enforced: a breaking change needs `!` (or a `BREAKING CHANGE:`
@@ -85,7 +111,18 @@ split, or this versioning rule cannot be released until a fresh baseline tag is
 cut by hand — fixing `main` does not help, because the old tree is the one
 being packaged. ferro-match (`v0.2.0`, still holding `iron-match-*` crates),
 ferro-replay (`v0.1.0`, before the `ferro-clock`/`ferro-journal` split) and
-anvil (`v0.1.0`, versionless path dependencies) each needed one.
+anvil (`v0.1.0`, versionless path dependencies) and morphiq-platform (`v0.1.0`,
+same) each needed one. Cut it by bumping the version so the release job tags a
+tree that satisfies the rules; from there the tooling owns the versions again.
+
+Everything from here to the end of this section is the **producer** track only.
+Consumers need none of it — no `release-plz.toml`, no packageable workspace, no
+baseline tag — because nothing on that track runs `cargo package`. They need a
+`release.yml` calling `rust-tag-release.yml@ci-v1` with `contents: write` at the
+call site and `release-token: ${{ secrets.RELEASE_PLZ_TOKEN }}`, and that is
+all. The token must not be `GITHUB_TOKEN` there either: a tag pushed with it
+does not trigger `on: push: tags` workflows, so the image build would never fire
+and the release would silently produce nothing.
 
 ### Setting up a Rust repository
 
