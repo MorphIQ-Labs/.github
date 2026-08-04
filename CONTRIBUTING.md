@@ -185,3 +185,19 @@ The `ferro-*` family is authoritative. Retired `iron-*`, `ferrum`,
 `ferromatch`, and related names must not be introduced into new code, copy, or
 repository references.
 
+**Check a new crate's name against crates.io before using it, even though we
+never publish there.** When cargo packages an internal dependency it strips the
+`path` and resolves the version requirement from the registry. If a public
+crate happens to share the name and satisfies the requirement, cargo takes it —
+silently, and builds against a stranger's API. morphiq-platform had a crate
+called `trading-calendar`; an unrelated `trading-calendar 0.2.3` exists on
+crates.io, satisfied `^0.2.0`, and the release build failed on
+`no associated function named nyse found for struct TradingCalendar`, pointing
+into `index.crates.io-.../trading-calendar-0.2.3/`. It is now
+`morphiq-trading-calendar`.
+
+This bites outside CI too: anyone running `cargo package` or `cargo publish`
+locally gets the same substitution, and a public crate can publish a matching
+version at any time. Generic names are the risk — `sdk`, `common`,
+`trading-calendar`. Prefer a prefix that no one else would take.
+
