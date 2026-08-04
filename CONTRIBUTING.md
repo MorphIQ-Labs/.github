@@ -24,6 +24,15 @@ commit subject, and release tooling reads those subjects to choose the next
 version and write the changelog. A title it cannot parse contributes nothing to
 either.
 
+A few repositories keep a long-lived `develop` branch that integrates work
+before it reaches `main` — currently `spread-foundry`, `ferro-wave`,
+`vector-wave`, and `kalshi-ferro-demo`. Feature branches there are still
+squashed into `develop`, but the `develop` -> `main` pull request is merged with
+a **merge commit**, not squashed. Squashing it would put a commit on `main` that
+is not in `develop`'s history, so `develop` would never become an ancestor of
+`main` and every later release pull request would replay the whole backlog
+against changes already applied.
+
 Keep generated build outputs, dependencies, credentials, and local
 configuration out of commits.
 
@@ -44,8 +53,46 @@ to a `0.x` crate is `0.16.0 -> 0.17.0`, never `0.16.1`.
 
 Nothing is published to a package registry. GitHub Packages has no Cargo format
 and neither does Google Artifact Registry, so Rust crates are distributed as
-git tags, which is what consuming repositories already pin. Manifests carry
-`publish = false` so a stray `cargo publish` is refused.
+git tags, which is what consuming repositories already pin.
+
+**The guard against a stray `cargo publish` belongs in `release-plz.toml`, not
+in the manifests.** release-plz filters manifest-unpublishable packages through
+`publishable_packages()` before it reaches its tagging step, so a
+`publish = false` in a `Cargo.toml` does not merely refuse publication — it
+drops the package before there is anything to tag, turning every release into a
+silent "nothing to release". No error, no warning. ferro-risk hit this in #228
+and had to lift the setting; crates that exist only to be fuzzed or benchmarked
+may keep it, because they are not in the release group.
+
+### Setting up a Rust repository
+
+`release-plz.toml` at the repository root:
+
+- `publish = false` — keeps `cargo publish` out of the pipeline.
+- `git_only = true` — resolves the previous release from the `v{{ version }}`
+  tag rather than querying the cargo registry. Without it release-plz asks
+  crates.io what version the package is at, which is meaningless for a name
+  that is not there and actively wrong for one that is: anvil ships a crate
+  called `sdk`, and an unrelated `sdk` is published on crates.io, so
+  `semver_check` would diff our API against a stranger's.
+- `semver_check = true`.
+- `git_tag_name` and `git_release_name` set to `"v{{ version }}"`.
+- One `[[package]]` entry for the crate that owns the tag, plus an entry for
+  every other crate carrying `git_tag_enable = false` and
+  `git_release_enable = false`, all sharing one `version_group`. With a single
+  tag per workspace, every crate would otherwise race to create the same ref.
+
+`.github/workflows/release.yml`, calling
+`MorphIQ-Labs/ci-workflows/.github/workflows/rust-release.yml@ci-v1`. Grant
+`contents: write` and `pull-requests: write` **at the call site**: a reusable
+workflow's permissions may only be equal to or more restrictive than its
+caller's, and the organization default is read-only, so omitting them fails the
+run at startup with no jobs and no logs to explain why.
+
+The workflow uses the `RELEASE_PLZ_TOKEN` organization secret rather than
+`GITHUB_TOKEN`. A pull request opened by `GITHUB_TOKEN` does not trigger
+`pull_request` workflows, so the release pull request would never receive the
+checks that the `CI must pass` ruleset requires, and could never be merged.
 
 ## CI/CD
 
