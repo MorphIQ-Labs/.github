@@ -62,16 +62,30 @@ does not merely refuse publication — it drops the package before there is
 anything to tag, turning every release into a silent "nothing to release". No
 error, no warning. ferro-risk hit this in #228 and had to lift the setting.
 
-Every other crate may keep `publish = false`, including crates inside the
-release group: ferro-risk's `streaming-bench` keeps it and is still versioned
-and changelogged alongside the tag owner. The workspace-wide guard lives in
-`release-plz.toml`, so nothing reaches a registry either way.
+More precisely: **a crate must be publishable if anything else in the workspace
+depends on it.** `release-plz` runs `cargo package` over the workspace, and for
+a dependent crate cargo strips the `path` and looks the dependency up in the
+registry — so an unpublishable crate that something depends on fails with
+`no matching package named <crate> found`. A crate nothing depends on may keep
+`publish = false`: ferro-risk's `streaming-bench` and every `fuzz` crate do,
+and they are fine precisely because they are leaves. The workspace-wide guard
+lives in `release-plz.toml`, so nothing reaches a registry either way.
 
-Prefer a tag owner with no path dependencies. cargo-deny's
-`allow-wildcard-paths` exempts *private* crates only, so making a crate with
-wildcard path dependencies publishable trips the `bans` gate — which is why
-anvil's tag is owned by `platform-core` rather than by the `anvil-runner`
-binary.
+**Every internal path dependency needs an explicit version** —
+`{ path = "../platform-core", version = "0.2.0" }`. `cargo package` refuses a
+path dependency without a version requirement, and since release-plz packages
+the *previous tag's* tree as well as the current one, a tag cut before this was
+true can never serve as a baseline. It also settles cargo-deny, whose
+`allow-wildcard-paths` exemption applies to private crates only, so a
+versionless path dependency on a publishable crate fails the `bans` gate.
+
+The practical consequence: **the tree at every tag must satisfy all of the
+above.** A repository whose newest tag predates a crate rename, a workspace
+split, or this versioning rule cannot be released until a fresh baseline tag is
+cut by hand — fixing `main` does not help, because the old tree is the one
+being packaged. ferro-match (`v0.2.0`, still holding `iron-match-*` crates),
+ferro-replay (`v0.1.0`, before the `ferro-clock`/`ferro-journal` split) and
+anvil (`v0.1.0`, versionless path dependencies) each needed one.
 
 ### Setting up a Rust repository
 
